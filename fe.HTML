@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Timesheet data</title>
+    <style>
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+        }
+        th,td {
+            border:1px solid #ddd;
+            padding: 8px;
+            text-align: left;
+        }
+    </style>
+</head>
+<body>
+    <h2>Timesheet Summary</h2>
+    <p> Hours Tracked: <span id='hoursTracked'>0</span></p>
+    <p>Billable Amount: <span id='billableAmount'>$0.00</span></p>
+
+    <h3>Search Timesheets by Client</h3>
+    <input type="text" id="queryInput" placeholder="Enter client name">
+    <button onclick="filterData()">Search</button>
+
+    <table>
+        <thead>
+            <tr>
+                <th>Name</th>
+                <th>Clients</th>
+                <th>Hours</th>
+                <th>Billable Hours</th>
+                <th>Billable Amount</th>
+            </tr>
+        </thead>
+        <tbody id="timesheetTableBody"></tbody>
+    </table>
+    <script>
+        //fetch timesheet data from the api
+        function fetchAllEntries() {
+            console.log("Fetching all entries...");  
+            fetch('http://127.0.0.1:5000/timesheet_entries')
+            .then(response => response.json())
+            .then(data => {
+                console.log(data);
+                displayData(data);
+            })
+            .catch(error => console.error('Error fetching timesheet data:', error))
+        }
+
+        //function to display data in the table
+        function displayData(data) {
+            console.log('data received for API:', data);
+
+            let totalHours = 0;
+            let totalBillableAmount = 0;
+
+            const tableBody = document.getElementById('timesheetTableBody');
+            tableBody.innerHTML = ''; //CLear existing table rows
+
+            //Loop through each timesheet entry
+            data.forEach(entry => {
+                console.log("Current Entry:", entry);
+
+                const name = entry.Name || 'N/A';
+                const client = entry.Client || 'N/A';
+                const hours = (entry.Hours !== undefined && entry.Hours !== null) ? entry.Hours.toFixed(2) : '0.00';
+                const billableRate = (entry['Billable Rate'] !== undefined && entry['Billable Rate'] !== null) ? entry['Billable Rate'].toFixed(2) : '0.00';
+                const billableAmount = (entry.Billable_amount !== undefined && entry.Billable_amount !== null) ? entry.Billable_amount.toFixed(2) : '---';
+
+                totalHours += entry.Hours || 0;
+                totalBillableAmount += entry.Billable_amount || 0;         
+
+                //console.log("Formatted Hours:", hours);
+                //console.log("Formatted Billable Rate:", billableRate);
+                //console.log("Formatted Billable Amount:", billableAmount);
+
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${name}</td>
+                    <td>${client}</td>
+                    <td>${hours}</td>  <!-- Display Hours -->
+                    <td>${billableRate}</td>  <!-- Display Billable Rate -->
+                    <td>${billableAmount}</td>
+                `;
+                tableBody.appendChild(row);
+            });
+                console.log("Total Hours:", totalHours);
+                console.log("Total Billable Amount:", totalBillableAmount);
+
+                // Update the toal hours tracked and billable amout
+                document.getElementById('hoursTracked').innerText = totalHours.toFixed(2);
+                document.getElementById('billableAmount').innerText = `$${totalBillableAmount.toFixed(2)}`;
+        }
+
+        function filterData() {
+            const query = document.getElementById('queryInput').value;
+            fetch(`http://127.0.0.1:5000/timesheet_entries/search?client=${query}`)
+                .then(response => response.json())
+                .then(data => displayData(data))
+                .catch(error => console.error('Error fetching timesheet data:', error));
+        }
+        window.onload = fetchAllEntries;
+    </script>
+
+</body>
+</html>
